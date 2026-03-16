@@ -3,15 +3,19 @@ kind: Config
 metadata:
   name: ets-gt-triggers-pipeline
 
+build:
+  artifacts:
+  - image: ets-gt-triggers
+
 deploy:
   helm:
     releases:
     - name: ets-gt-triggers
-      chartPath: ../charts/ets-gt-triggers
+      chartPath: ../ets-gt-triggers
       namespace: gt-uat-ashva
 
       valuesFiles:
-      - ../charts/ets-gt-triggers/values.yaml
+      - ../ets-gt-triggers/values.yaml
 
       setValueTemplates:
         image.tag: "{{.IMAGE_TAG}}"

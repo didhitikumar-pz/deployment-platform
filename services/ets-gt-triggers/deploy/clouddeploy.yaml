@@ -18,7 +18,6 @@ requireApproval: false
 
 deployParameters:
   IMAGE_REPO: "us.gcr.io/gt-x-web-e2575/ets-gt-triggers"
-  IMAGE_TAG: ""
   GKE_SA: "gtx-cluster-service-acount"
   GKE_SA_EMAIL: "gtx-cluster-service-acount@gt-x-web-e2575.iam.gserviceaccount.com"
   NAMESPACE: "gt-uat-ashva"
