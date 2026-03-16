@@ -1,6 +1,6 @@
 substitutions:
   _IMAGE_NAME: 'ets-gt-triggers'
-  _DELIVERY_PIPELINE: 'ets-gt-trigger-test-pipeline'
+  _DELIVERY_PIPELINE: 'ets-gt-trigger-pipeline'
   _REGION: 'us-west1'
   _ENVIRONMENT: 'uat'
 
