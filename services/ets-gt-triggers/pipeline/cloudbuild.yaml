@@ -17,7 +17,7 @@ steps:
   - '-c'
   - |
     TOKEN=$(gcloud secrets versions access latest --secret=github-token)
-    git clone https://x-access-token:$TOKEN@github.com/pzonehub/ets-gt-triggers.git /workspace/app
+    git clone https://x-access-token:$$TOKEN@github.com/pzonehub/ets-gt-triggers.git /workspace/app
 
 # Fetch gradle properties
 - name: 'gcr.io/cloud-builders/gcloud'
@@ -37,7 +37,7 @@ steps:
   - '-c'
   - |
     TIMESTAMP=$(date +'%Y%m%d%H%M%S')
-    echo $TIMESTAMP > /workspace/timestamp.txt
+    echo $$TIMESTAMP > /workspace/timestamp.txt
 
 # Configure logging
 - name: 'gcr.io/cloud-builders/gcloud'
@@ -68,7 +68,7 @@ steps:
     TIMESTAMP=$(cat /workspace/timestamp.txt)
 
     docker build \
-      -t us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:$TIMESTAMP \
+      -t us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:$$TIMESTAMP \
       -t us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:latest \
       /workspace/app
 
@@ -81,7 +81,7 @@ steps:
   - |
     TIMESTAMP=$(cat /workspace/timestamp.txt)
 
-    docker push us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:$TIMESTAMP
+    docker push us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:$$TIMESTAMP
     docker push us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:latest
 
 # Load env config
@@ -114,15 +114,15 @@ steps:
       "cs-secretes"
     )
 
-    mkdir -p "$OUTPUT_DIR"
+    mkdir -p $$OUTPUT_DIR
 
-    FULL_PATH="$OUTPUT_DIR/$OUTPUT_FILE"
+    FULL_PATH=$$OUTPUT_DIR/$$OUTPUT_FILE
 
-    > "$FULL_PATH"
+    > $$FULL_PATH
 
-    for SECRET_NAME in "${SECRETS[@]}"; do
-      gcloud secrets versions access latest --secret="$SECRET_NAME" >> "$FULL_PATH"
-      echo "" >> "$FULL_PATH"
+    for SECRET_NAME in "$${SECRETS[@]}"; do
+      gcloud secrets versions access latest --secret="$$SECRET_NAME" >> $$FULL_PATH
+      echo "" >> $$FULL_PATH
     done
 
 # Trigger deploy
@@ -135,13 +135,13 @@ steps:
     TIMESTAMP=$(cat /workspace/timestamp.txt)
     source /workspace/env-config.txt
 
-    gcloud deploy releases create release-${_ENVIRONMENT}-${TIMESTAMP} \
+    gcloud deploy releases create release-${_ENVIRONMENT}-$$TIMESTAMP \
       --delivery-pipeline=${_DELIVERY_PIPELINE} \
       --region=${_REGION} \
-      --project=$CLOUD_DEPLOY_PROJECT \
+      --project=$$CLOUD_DEPLOY_PROJECT \
       --source=/workspace/services/ets-gt-triggers \
       --skaffold-file=deploy/skaffold.yaml \
-      --images=app=us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:${TIMESTAMP} \
+      --images=app=us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:$$TIMESTAMP \
       --to-target=ets-gt-trigger-test-uat
 
 timeout: 1800s
