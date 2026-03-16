@@ -1,0 +1,25 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: ets-gt-triggers-pipeline
+
+deploy:
+  helm:
+    releases:
+    - name: ets-gt-triggers
+      chartPath: ../charts/ets-gt-triggers
+      namespace: gt-uat-ashva
+
+      valuesFiles:
+      - ../charts/ets-gt-triggers/values.yaml
+
+      setValueTemplates:
+        image.tag: "{{.IMAGE_TAG}}"
+        image.repository: "{{.IMAGE_REPO}}"
+        serviceAccount.name: "{{.GKE_SA}}"
+        serviceAccount.annotations."iam\.gke\.io/gcp-service-account": "{{.GKE_SA_EMAIL}}"
+        environment: "{{.ENVIRONMENT}}"
+        volumes[0].configMap.name: "ets-gt-triggers-{{.ENVIRONMENT}}-config"
+        ap.env: "{{.ENVIRONMENT}}"
+
+      upgradeOnChange: true

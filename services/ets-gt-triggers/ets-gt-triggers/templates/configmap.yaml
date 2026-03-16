@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ets-gt-triggers-{{ .Values.ap.env }}-config
+  labels:
+    {{- include "ets-gt-triggers.labels" . | nindent 4 }}
+data:
+  {{- $path := printf "config/application-%s.properties" .Values.ap.env }}
+  {{- if .Files.Get $path }}
+  application.properties: |-
+{{ (.Files.Get $path) | indent 4 }}
+  {{- else }}
+  application.properties: |-
+    # No configuration found for environment: {{ .Values.ap.env }}
+  {{- end }}

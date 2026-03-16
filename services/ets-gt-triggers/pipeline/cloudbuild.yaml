@@ -1,0 +1,154 @@
+substitutions:
+  _IMAGE_NAME: 'ets-gt-triggers'
+  _DELIVERY_PIPELINE: 'ets-gt-trigger-test-pipeline'
+  _REGION: 'us-west1'
+  _ENVIRONMENT: 'uat'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+
+# Clone source code repo
+- name: 'gcr.io/cloud-builders/git'
+  id: 'clone-source-repo'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    TOKEN=$(gcloud secrets versions access latest --secret=github-token)
+    git clone https://x-access-token:$TOKEN@github.com/pzonehub/ets-gt-triggers.git /workspace/app
+
+# Fetch gradle properties
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: 'fetch-gradle-properties'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    mkdir -p /builder/home/.gradle
+    gcloud secrets versions access latest --secret=gradle-properties > /builder/home/.gradle/gradle.properties
+
+# Create timestamp
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: 'create-build-timestamp'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    TIMESTAMP=$(date +'%Y%m%d%H%M%S')
+    echo $TIMESTAMP > /workspace/timestamp.txt
+
+# Configure logging
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: 'configure-logging'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    gcloud secrets versions access latest --secret=log | base64 -d > /workspace/app/src/main/resources/logback-spring.xml
+    rm -f /workspace/app/src/main/resources/log4j2.xml
+
+# Build Java application
+- name: 'gradle:8.7-jdk17'
+  id: 'compile-java-application'
+  dir: '/workspace/app'
+  entrypoint: 'gradle'
+  args: [ 'build', '--no-daemon', '--stacktrace' ]
+  env:
+  - 'GRADLE_USER_HOME=/builder/home/.gradle'
+
+# Build docker image
+- name: 'gcr.io/cloud-builders/docker'
+  id: 'build-container-image'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    TIMESTAMP=$(cat /workspace/timestamp.txt)
+
+    docker build \
+      -t us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:$TIMESTAMP \
+      -t us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:latest \
+      /workspace/app
+
+# Push image
+- name: 'gcr.io/cloud-builders/docker'
+  id: 'upload-to-registry'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    TIMESTAMP=$(cat /workspace/timestamp.txt)
+
+    docker push us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:$TIMESTAMP
+    docker push us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:latest
+
+# Load env config
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: 'set-environment-config'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    gcloud secrets versions access latest \
+      --secret=env-config-${_ENVIRONMENT} \
+      > /workspace/env-config.txt
+
+# Generate application.properties for Helm
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: 'generate-application-properties-for-helm'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    source /workspace/env-config.txt
+
+    OUTPUT_DIR="/workspace/services/ets-gt-triggers/ets-gt-triggers/config"
+    OUTPUT_FILE="application-${_ENVIRONMENT}.properties"
+
+    SECRETS=(
+      "ets-gt-trigger-app-prop"
+      "spring-common-config"
+      "ashva-kafka-secret"
+      "cs-secretes"
+    )
+
+    mkdir -p "$OUTPUT_DIR"
+
+    FULL_PATH="$OUTPUT_DIR/$OUTPUT_FILE"
+
+    > "$FULL_PATH"
+
+    for SECRET_NAME in "${SECRETS[@]}"; do
+      gcloud secrets versions access latest --secret="$SECRET_NAME" >> "$FULL_PATH"
+      echo "" >> "$FULL_PATH"
+    done
+
+# Trigger deploy
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  id: 'trigger-cloud-deploy'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    TIMESTAMP=$(cat /workspace/timestamp.txt)
+    source /workspace/env-config.txt
+
+    gcloud deploy releases create release-${_ENVIRONMENT}-${TIMESTAMP} \
+      --delivery-pipeline=${_DELIVERY_PIPELINE} \
+      --region=${_REGION} \
+      --project=$CLOUD_DEPLOY_PROJECT \
+      --source=/workspace/services/ets-gt-triggers \
+      --skaffold-file=deploy/skaffold.yaml \
+      --images=app=us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:${TIMESTAMP} \
+      --to-target=ets-gt-trigger-test-uat
+
+timeout: 1800s
+
+images:
+- 'us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:latest'
+
+tags:
+- 'ets-gt-triggers'
+- '${_ENVIRONMENT}'

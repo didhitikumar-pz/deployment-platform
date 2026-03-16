@@ -1,0 +1,28 @@
+apiVersion: deploy.cloud.google.com/v1
+kind: DeliveryPipeline
+metadata:
+  name: ets-gt-triggers-pipeline
+description: ETS GT Triggers Test Pipeline
+
+serialPipeline:
+  stages:
+  - targetId: ets-gt-triggers-uat
+---
+apiVersion: deploy.cloud.google.com/v1
+kind: Target
+metadata:
+  name: ets-gt-triggers-uat
+description: ETS GT Trigger UAT
+
+requireApproval: false
+
+deployParameters:
+  IMAGE_REPO: "us.gcr.io/gt-x-web-e2575/ets-gt-triggers"
+  IMAGE_TAG: ""
+  GKE_SA: "gtx-cluster-service-acount"
+  GKE_SA_EMAIL: "gtx-cluster-service-acount@gt-x-web-e2575.iam.gserviceaccount.com"
+  NAMESPACE: "gt-uat-ashva"
+  ENVIRONMENT: "uat"
+
+gke:
+  cluster: projects/gt-x-web-e2575/locations/us-west1-a/clusters/gt-uat-cluster

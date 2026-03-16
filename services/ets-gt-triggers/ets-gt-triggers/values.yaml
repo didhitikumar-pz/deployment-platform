@@ -1,0 +1,78 @@
+replicaCount: 1
+
+image:
+  repository: ""
+  pullPolicy: Always
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  automount: true
+  annotations: {}
+  name: ""
+
+ap:
+  env: ""
+
+environment: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+
+resources:
+  limits:
+    memory: 4Gi
+  requests:
+    memory: 2Gi
+
+livenessProbe:
+  httpGet:
+    path: /actuator/manage/health/liveness
+    port: 8080
+  initialDelaySeconds: 60
+  periodSeconds: 15
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /actuator/manage/health/readiness
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+volumes:
+- name: app-prop
+  configMap:
+    name: ""
+
+volumeMounts:
+- name: app-prop
+  mountPath: "/home/config"
+  readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+httpRoute:
+  enabled: false
