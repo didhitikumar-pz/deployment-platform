@@ -128,7 +128,7 @@ steps:
       --source=/workspace/services/ets-gt-triggers \
       --skaffold-file=deploy/skaffold.yaml \
       --images=ets-gt-triggers=us.gcr.io/$PROJECT_ID/${_IMAGE_NAME}:$$TIMESTAMP \
-      --to-target=ets-gt-trigger-test-uat
+      --to-target=ets-gt-triggers-uat
 
 timeout: 1800s
 
